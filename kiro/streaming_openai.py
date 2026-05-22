@@ -412,7 +412,13 @@ async def stream_kiro_to_openai_internal(
             f"completion_tokens={completion_tokens} (tiktoken), "
             f"total_tokens={total_tokens} ({total_source})"
         )
-        
+
+        try:
+            from kiro.stats_tracker import stats_tracker
+            stats_tracker.record(model=model, input_tokens=prompt_tokens, output_tokens=completion_tokens)
+        except Exception:
+            pass
+
         yield f"data: {json.dumps(final_chunk, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
         

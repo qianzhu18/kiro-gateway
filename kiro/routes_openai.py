@@ -63,27 +63,36 @@ except ImportError:
 
 # --- Security scheme ---
 api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
+x_api_key_header = APIKeyHeader(name="x-api-key", auto_error=False)
 
 
-async def verify_api_key(auth_header: str = Security(api_key_header)) -> bool:
+async def verify_api_key(
+    auth_header: str = Security(api_key_header),
+    x_api_key: str = Security(x_api_key_header),
+) -> bool:
     """
-    Verify API key in Authorization header.
-    
-    Expects format: "Bearer {PROXY_API_KEY}"
-    
+    Verify API key from Authorization or x-api-key header.
+
+    Accepts:
+    1. Authorization: Bearer {PROXY_API_KEY}
+    2. x-api-key: {PROXY_API_KEY}  (Anthropic native format, used by Claude Desktop)
+
     Args:
         auth_header: Authorization header value
-    
+        x_api_key: x-api-key header value
+
     Returns:
         True if key is valid
-    
+
     Raises:
         HTTPException: 401 if key is invalid or missing
     """
-    if not auth_header or auth_header != f"Bearer {PROXY_API_KEY}":
-        logger.warning("Access attempt with invalid API key.")
-        raise HTTPException(status_code=401, detail="Invalid or missing API Key")
-    return True
+    if x_api_key and x_api_key == PROXY_API_KEY:
+        return True
+    if auth_header and auth_header == f"Bearer {PROXY_API_KEY}":
+        return True
+    logger.warning("Access attempt with invalid API key.")
+    raise HTTPException(status_code=401, detail="Invalid or missing API Key")
 
 
 # --- Router ---

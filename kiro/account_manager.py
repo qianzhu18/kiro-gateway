@@ -401,19 +401,30 @@ class AccountManager:
         
         state_path = Path(self._state_file)
         tmp_path = state_path.with_suffix('.json.tmp')
-        
+
         try:
             with open(tmp_path, 'w', encoding='utf-8') as f:
                 json.dump(state_data, f, indent=2, ensure_ascii=False)
-            
-            # Atomic rename
-            tmp_path.replace(state_path)
+
+            # Try atomic rename first; fall back to direct write for Docker bind mounts
+            try:
+                tmp_path.replace(state_path)
+            except OSError:
+                with open(state_path, 'w', encoding='utf-8') as f:
+                    json.dump(state_data, f, indent=2, ensure_ascii=False)
+                try:
+                    tmp_path.unlink()
+                except Exception:
+                    pass
             logger.debug("State saved successfully")
-        
+
         except Exception as e:
             logger.error(f"Failed to save state: {e}")
             if tmp_path.exists():
-                tmp_path.unlink()
+                try:
+                    tmp_path.unlink()
+                except Exception:
+                    pass
     
     async def save_state_periodically(self) -> None:
         """

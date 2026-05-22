@@ -524,6 +524,14 @@ async def lifespan(app: FastAPI):
     # Final state save
     await app.state.account_manager._save_state()
     logger.info("Final state saved")
+
+    # Flush token stats to disk
+    try:
+        from kiro.stats_tracker import stats_tracker
+        stats_tracker.flush()
+        logger.info("Stats flushed to disk")
+    except Exception as e:
+        logger.warning(f"Failed to flush stats: {e}")
     
     # Close HTTP client
     try:
@@ -570,6 +578,10 @@ app.include_router(openai_router)
 
 # Anthropic-compatible API: /v1/messages
 app.include_router(anthropic_router)
+
+# Stats dashboard: /stats, /stats/api
+from kiro.routes_dashboard import router as dashboard_router
+app.include_router(dashboard_router)
 
 
 # --- Uvicorn log config ---

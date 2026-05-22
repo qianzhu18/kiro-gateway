@@ -46,13 +46,20 @@ services:
       # Mount credentials file (if using KIRO_CREDS_FILE)
       # Uncomment and adjust path as needed:
       # - ~/.aws/sso/cache:/home/kiro/.aws/sso/cache:ro
-      
+
       # Mount kiro-cli database (if using KIRO_CLI_DB_FILE)
       # Uncomment and adjust path as needed:
       # - ~/.local/share/kiro-cli:/home/kiro/.local/share/kiro-cli  # Linux/macOS
-      
+
       # Mount debug logs directory (optional, for debugging)
       - ./debug_logs:/app/debug_logs
+
+      # Persist account pool config and runtime state across rebuilds
+      - ./credentials.json:/app/credentials.json
+      - ./state.json:/app/state.json
+
+      # Persist token usage stats across rebuilds
+      - ./stats_data.json:/app/stats_data.json
     
     restart: unless-stopped
     

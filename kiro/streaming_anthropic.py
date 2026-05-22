@@ -691,6 +691,12 @@ async def stream_kiro_to_anthropic(
             f"input_tokens={input_tokens}, output_tokens={output_tokens}, "
             f"tool_blocks={len(tool_blocks)}, stop_reason={stop_reason}"
         )
+
+        try:
+            from kiro.stats_tracker import stats_tracker
+            stats_tracker.record(model=model, input_tokens=input_tokens, output_tokens=output_tokens)
+        except Exception:
+            pass
         
     except FirstTokenTimeoutError:
         raise
@@ -850,6 +856,12 @@ async def collect_anthropic_response(
         "output_tokens": output_tokens
     }
     usage_payload.update(upstream_cache_usage)
+
+    try:
+        from kiro.stats_tracker import stats_tracker
+        stats_tracker.record(model=model, input_tokens=input_tokens, output_tokens=output_tokens)
+    except Exception:
+        pass
 
     return {
         "id": message_id,

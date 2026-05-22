@@ -3,6 +3,7 @@
 .env.local
 credentials.json
 state.json
+stats_data.json
 
 # IDE
 .vscode/

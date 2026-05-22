@@ -876,4 +876,89 @@ When working in this codebase:
 3. **Test everything** - Run `pytest -v` after changes
 4. **Use type hints** - Always add type annotations
 5. **Document changes** - Add docstrings with Args/Returns
+
+---
+
+## qianzhu 的使用场景（本地部署上下文）
+
+> 以下内容是 qianzhu 的个人部署配置，供 AI Agent 在本地会话中快速上手。
+
+### 目标
+
+用 Kiro Pro 账号的 token，通过 gateway 中转，给 Claude Code / Claude Desktop 提供免费的 Claude API 访问。
+
+### 当前配置
+
+| 项目 | 值 |
+|------|-----|
+| API Key | `qianzhu-kiro-gw-2026` |
+| 认证模式 | `ACCOUNT_SYSTEM=true`（号池模式） |
+| 代理 | `http://host.docker.internal:7897` |
+| 主力模型 | `claude-sonnet-4-6` |
+| 面板地址 | `http://localhost:8000/stats` |
+
+### 常用操作
+
+```bash
+# 验证 gateway
+curl -s -X POST http://localhost:8000/v1/chat/completions \
+  -H "Authorization: Bearer qianzhu-kiro-gw-2026" \
+  -H "Content-Type: application/json" \
+  -d '{"model":"claude-sonnet-4-6","messages":[{"role":"user","content":"hi"}],"max_tokens":20}'
+
+# 查看日志
+docker logs kiro-gateway --tail 50
+
+# 重启
+docker restart kiro-gateway
+
+# 重建镜像（代码变更后）
+cd "/Users/mac/qianzhu Vault/project/kiro-proxy/kiro-gateway"
+docker-compose up -d --build
+
+# 查看 token 统计（JSON）
+curl -s http://localhost:8000/stats/api | python3 -m json.tool
+
+# 查看 token 统计面板（浏览器）
+open http://localhost:8000/stats
+```
+
+### 首次部署注意
+
+`stats_data.json`、`credentials.json`、`state.json` 必须在宿主机提前创建，否则 Docker 会把它们当目录挂载：
+```bash
+echo '{"daily":{}}' > stats_data.json
+echo '[]' > credentials.json
+echo '{}' > state.json
+```
+
+### 添加新账号
+
+1. 编辑 `credentials.json`，追加：
+```json
+{
+  "type": "refresh_token",
+  "refresh_token": "<新token>",
+  "region": "us-east-1",
+  "comment": "账号N - YYYY-MM-DD"
+}
+```
+2. `docker restart kiro-gateway`
+
+### Agent 行为指引
+
+| 用户说 | 应该做 |
+|--------|--------|
+| "加新账号" / "换号了" | 写入 `credentials.json`，执行 `docker restart kiro-gateway` |
+| "token 过期" / "报 401" | 引导提供新 token，更新配置，重启 |
+| "验证一下" | 执行上方 curl 测试 |
+| "看看 token 消耗" | 打开 `http://localhost:8000/stats` |
+| "代码有改动" | `docker-compose up -d --build` |
+
+### 注意事项
+
+- token 不要明文输出到对话，用"账号1 的 token"描述
+- `credentials.json` 不要提交 git
+- 换号时代理节点不要选港澳
+- 账号存档在 memory：`~/.claude/projects/.../memory/kiro_account.md`
 6. **Isolate tests** - Never make real network calls in tests
